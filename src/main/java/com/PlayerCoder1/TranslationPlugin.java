@@ -10,6 +10,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.json.JSONObject;
 
 import javax.inject.Inject;
@@ -81,14 +82,19 @@ public class TranslationPlugin extends Plugin {
 		try (Response response = client.newCall(request).execute()) {
 			if (!response.isSuccessful()) {
 				if (response.code() == 429) {
-					// Handle API limit exceeded error
+
 					throw new ApiLimitExceededException("API usage limit exceeded");
 				}
 				throw new IOException("Unexpected code " + response);
 			}
 
-			JSONObject jsonResponse = new JSONObject(response.body().string());
-			return jsonResponse.getJSONObject("responseData").getString("translatedText");
+			ResponseBody responseBody = response.body();
+			if (responseBody != null) {
+				JSONObject jsonResponse = new JSONObject(responseBody.string());
+				return jsonResponse.getJSONObject("responseData").getString("translatedText");
+			} else {
+				throw new IOException("Response body is null");
+			}
 		}
 	}
 
