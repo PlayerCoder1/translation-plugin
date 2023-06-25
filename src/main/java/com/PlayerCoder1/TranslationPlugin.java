@@ -20,27 +20,31 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @PluginDescriptor(
 		name = "Translation Plugin",
 		description = "Translates everything in the chatbox from English to Spanish",
 		tags = {"Translation","English","Spanish","Translator"}
 )
-public class TranslationPlugin extends Plugin
-{
+public class TranslationPlugin extends Plugin {
 	private static final int MAX_MESSAGES = 14;
 
 	private final LinkedList<String> lastMessages = new LinkedList<>();
-	private OkHttpClient client;
+	private ExecutorService executorService;
 	private TranslationPanel panel;
 	private NavigationButton navButton;
+
+	@Inject
+	private OkHttpClient client;
 
 	@Inject
 	private ClientToolbar clientToolbar;
 
 	@Override
 	protected void startUp() {
-		client = new OkHttpClient();
+		executorService = Executors.newFixedThreadPool(10);
 
 		panel = new TranslationPanel(this);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "panel_icon.png");
@@ -55,17 +59,19 @@ public class TranslationPlugin extends Plugin
 
 	@Override
 	protected void shutDown() {
-		client = null;
+		executorService.shutdown();
 		clientToolbar.removeNavigation(navButton);
 	}
-
-	public List<String> getLastMessages()
-	{
+	public static class ApiLimitExceededException extends Exception {
+		public ApiLimitExceededException(String message) {
+			super(message);
+		}
+	}
+	public List<String> getLastMessages() {
 		return lastMessages;
 	}
 
-	public String translateText(String originalText, String targetLanguage) throws IOException
-	{
+	public String translateText(String originalText, String targetLanguage) throws IOException, ApiLimitExceededException {
 		String url = "https://api.mymemory.translated.net/get?q=" + URLEncoder.encode(originalText, StandardCharsets.UTF_8) + "&langpair=en|" + targetLanguage;
 
 		Request request = new Request.Builder()
@@ -73,25 +79,27 @@ public class TranslationPlugin extends Plugin
 				.build();
 
 		try (Response response = client.newCall(request).execute()) {
-			if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+			if (!response.isSuccessful()) {
+				if (response.code() == 429) {
+					// Handle API limit exceeded error
+					throw new ApiLimitExceededException("API usage limit exceeded");
+				}
+				throw new IOException("Unexpected code " + response);
+			}
 
 			JSONObject jsonResponse = new JSONObject(response.body().string());
 			return jsonResponse.getJSONObject("responseData").getString("translatedText");
 		}
 	}
 
-
-
 	@Subscribe
-	public void onChatMessage(ChatMessage chatMessage)
-	{
+	public void onChatMessage(ChatMessage chatMessage) {
 		String originalMessage = chatMessage.getMessage();
 		String playerName = chatMessage.getName();
 
-		new Thread(() -> {
+		executorService.submit(() -> {
 			try {
 				String translatedMessage = translateText(originalMessage, "es");
-
 
 				SwingUtilities.invokeLater(() -> {
 					lastMessages.addFirst(playerName + ": " + translatedMessage);
@@ -99,12 +107,16 @@ public class TranslationPlugin extends Plugin
 						lastMessages.removeLast();
 					}
 
-
 					panel.updateMessages();
+				});
+			} catch (ApiLimitExceededException e) {
+				SwingUtilities.invokeLater(() -> {
+					JOptionPane.showMessageDialog(null, "You have reached the 5000 words for today, please wait 24 hours to use the plugin again", "Error", JOptionPane.ERROR_MESSAGE);
+					shutDown();
 				});
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		}).start();
+		});
 	}
 }

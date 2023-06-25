@@ -22,7 +22,7 @@ dependencies {
 	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
 	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
 
-	implementation 'org.json:json:20210307' // Add this line
+	implementation 'org.json:json:20230618'
 
 }
 
