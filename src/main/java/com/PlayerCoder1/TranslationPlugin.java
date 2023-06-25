@@ -3,7 +3,6 @@ package com.PlayerCoder1;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
-import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -18,15 +17,18 @@ import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 
 @PluginDescriptor(
-		name = "AI Translation Plugin"
+		name = "Translation Plugin",
+		description = "Translates everything in the chatbox from English to Spanish",
+		tags = {"Translation","English","Spanish","Translator"}
 )
 public class TranslationPlugin extends Plugin
 {
-	private static final int MAX_MESSAGES = 10;
+	private static final int MAX_MESSAGES = 14;
 
 	private final LinkedList<String> lastMessages = new LinkedList<>();
 	private OkHttpClient client;
@@ -37,8 +39,7 @@ public class TranslationPlugin extends Plugin
 	private ClientToolbar clientToolbar;
 
 	@Override
-	protected void startUp() throws Exception
-	{
+	protected void startUp() {
 		client = new OkHttpClient();
 
 		panel = new TranslationPanel(this);
@@ -53,8 +54,7 @@ public class TranslationPlugin extends Plugin
 	}
 
 	@Override
-	protected void shutDown() throws Exception
-	{
+	protected void shutDown() {
 		client = null;
 		clientToolbar.removeNavigation(navButton);
 	}
@@ -66,7 +66,7 @@ public class TranslationPlugin extends Plugin
 
 	public String translateText(String originalText, String targetLanguage) throws IOException
 	{
-		String url = "https://api.mymemory.translated.net/get?q=" + URLEncoder.encode(originalText, "UTF-8") + "&langpair=en|" + targetLanguage;
+		String url = "https://api.mymemory.translated.net/get?q=" + URLEncoder.encode(originalText, StandardCharsets.UTF_8) + "&langpair=en|" + targetLanguage;
 
 		Request request = new Request.Builder()
 				.url(url)
