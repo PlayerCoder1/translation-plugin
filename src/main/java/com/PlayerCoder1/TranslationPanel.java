@@ -9,6 +9,7 @@ import java.awt.*;
 public class TranslationPanel extends PluginPanel {
     private final TranslationPlugin plugin;
     private final DefaultListModel<String> listModel = new DefaultListModel<>();
+    private final JComboBox<String> languageComboBox;
 
     public TranslationPanel(TranslationPlugin plugin) {
         super();
@@ -17,11 +18,25 @@ public class TranslationPanel extends PluginPanel {
         setLayout(new BorderLayout());
         setBackground(new Color(30, 30, 30));
 
+
+        languageComboBox = new JComboBox<>(new String[]{"ES", "FR", "IT", "NL"});
+        languageComboBox.addActionListener(e -> {
+
+            String selectedLanguage = (String) languageComboBox.getSelectedItem();
+            plugin.setTargetLanguage(selectedLanguage);
+        });
+
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topPanel.setBackground(new Color(30, 30, 30));
+        topPanel.add(new JLabel("Target Language: "));
+        topPanel.add(languageComboBox);
+
+        add(topPanel, BorderLayout.NORTH);
+
         JList<String> messageList = new JList<>(listModel);
         messageList.setBackground(new Color(30, 30, 30));
         messageList.setForeground(Color.WHITE);
         messageList.setFont(new Font("Arial", Font.PLAIN, 12));
-
 
         messageList.setCellRenderer(new DefaultListCellRenderer() {
             @Override

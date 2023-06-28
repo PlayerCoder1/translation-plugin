@@ -26,16 +26,17 @@ import java.util.concurrent.Executors;
 
 @PluginDescriptor(
 		name = "Translation Plugin",
-		description = "Translates everything in the chatbox from English to Spanish",
-		tags = {"Translation","English","Spanish","Translator"}
+		description = "Translates everything in the chatbox",
+		tags = {"Translation", "Language"}
 )
 public class TranslationPlugin extends Plugin {
-	private static final int MAX_MESSAGES = 14;
+	private static final int MAX_MESSAGES = 13;
 
 	private final LinkedList<String> lastMessages = new LinkedList<>();
 	private ExecutorService executorService;
 	private TranslationPanel panel;
 	private NavigationButton navButton;
+	private String targetLanguage = "ES";
 
 	@Inject
 	private OkHttpClient client;
@@ -63,17 +64,28 @@ public class TranslationPlugin extends Plugin {
 		executorService.shutdown();
 		clientToolbar.removeNavigation(navButton);
 	}
+
 	public static class ApiLimitExceededException extends Exception {
 		public ApiLimitExceededException(String message) {
 			super(message);
 		}
 	}
+
 	public List<String> getLastMessages() {
 		return lastMessages;
 	}
 
-	public String translateText(String originalText, String targetLanguage) throws IOException, ApiLimitExceededException {
-		String url = "https://api.mymemory.translated.net/get?q=" + URLEncoder.encode(originalText, StandardCharsets.UTF_8) + "&langpair=en|" + targetLanguage;
+	public void setTargetLanguage(String targetLanguage) {
+		this.targetLanguage = targetLanguage;
+	}
+
+	public String getTargetLanguage() {
+		return targetLanguage;
+	}
+
+	public String translateText(String originalText) throws IOException, ApiLimitExceededException {
+		String encodedText = URLEncoder.encode(originalText, StandardCharsets.UTF_8);
+		String url = "https://api.mymemory.translated.net/get?q=" + encodedText + "&langpair=en|" + targetLanguage;
 
 		Request request = new Request.Builder()
 				.url(url)
@@ -82,7 +94,6 @@ public class TranslationPlugin extends Plugin {
 		try (Response response = client.newCall(request).execute()) {
 			if (!response.isSuccessful()) {
 				if (response.code() == 429) {
-
 					throw new ApiLimitExceededException("API usage limit exceeded");
 				}
 				throw new IOException("Unexpected code " + response);
@@ -105,7 +116,7 @@ public class TranslationPlugin extends Plugin {
 
 		executorService.submit(() -> {
 			try {
-				String translatedMessage = translateText(originalMessage, "es");
+				String translatedMessage = translateText(originalMessage);
 
 				SwingUtilities.invokeLater(() -> {
 					lastMessages.addFirst(playerName + ": " + translatedMessage);
@@ -117,7 +128,7 @@ public class TranslationPlugin extends Plugin {
 				});
 			} catch (ApiLimitExceededException e) {
 				SwingUtilities.invokeLater(() -> {
-					JOptionPane.showMessageDialog(null, "You have reached the 5000 words for today, please wait 24 hours to use the plugin again", "Error", JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(null, "You have reached the 5000 words limit for today. Please wait 24 hours to use the plugin again.", "Error", JOptionPane.ERROR_MESSAGE);
 					shutDown();
 				});
 			} catch (IOException e) {
