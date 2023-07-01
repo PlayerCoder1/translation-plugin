@@ -49,7 +49,7 @@ public class TranslationPlugin extends Plugin {
 		executorService = Executors.newFixedThreadPool(10);
 
 		panel = new TranslationPanel(this);
-		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "panel_icon.png");
+		BufferedImage icon = ImageUtil.loadImageResource(TranslationPlugin.class, "panel_icon.png");
 		navButton = NavigationButton.builder()
 				.tooltip("Translation")
 				.icon(icon)
